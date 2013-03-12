@@ -1,0 +1,106 @@
+
+{-data Cons = Nil|Cons1 Int| Cons2 String	deriving Show
+
+data Term = Cons
+	    |Var String Cons
+	    |Struct String [Term]
+	    deriving Show 
+-}
+
+--Above alternate definiton of Cons but failed produced errors 
+--Here Cons is always a String it can be changed to an int if needed by built in functions 
+--The Convention used is that an unbound Variable (Var) has an empty String ("") as a Value
+
+insert x y = x:y
+contains _ [] = False;
+contains x (y:ys) = if x==y then True else contains x ys
+
+
+data Term = Nil
+		|No
+	    |Yes
+	    |Oper Term Char Term
+	    |Cons String
+	    |Var String Term
+	    |Struct String [Term]
+	    deriving (Eq,Show)
+
+
+data Rule = Term :- [Term] deriving Show 
+
+data Clause = Term|Rule
+
+getVar :: Term -> String
+getVar (Var x _) = x
+getVar (Cons x) = ""
+getVar (Yes) = ""
+isOrder _ (_,_) = True
+getVarLeft _ (x,y) = getVar x
+getVarRight _ (x,y) = getVar y
+
+getTerms(Struct _ y) = y
+setTerms (Struct y _) x = Struct y x
+getVarList [] = []
+getVarList (x:xs) = getVar x : getVarList xs
+
+
+countOccur _ [] = 0
+countOccur x (y:ys) = if x == y then 1 + countOccur x ys else countOccur x ys
+
+isValid [] _ = True
+isValid (x:xs) l = if (countOccur x l == 1) then isValid xs l else if x=="" then True else False
+--Simple boolean functions to check state of term may be enhanced to say that only Var with upper case letters are true and lower case for Cons
+
+
+--Main unify function
+
+unify (Cons x) (Cons y) = if x==y then [Yes] else [No]
+unify (Var x Nil) y =  [Var x y]
+unify  y (Var x Nil) =  [Var x y]
+unify (Var x1 Nil) (Var x2 y2) = unify (Var x1 Nil) y2
+unify (Var x1 y1) (Cons y2) = unify y1 (Cons y2)
+unify (Cons y2) (Var x1 y1) = unify y1 (Cons y2)
+unify (Var x1 y1) (Var x2 y2) = unify y1 y2
+
+-- To unify Struct one must first check their names and the lengths of their arguments then proceed to unify lists of terms
+unify (Struct x1 []) (Struct x2 []) = if x1 == x2 then [Yes] else [No]
+unify (Struct x1 (x:xs)) (Struct x2 (y:ys))
+			|x1==x2 && length(x:xs)==length(y:ys) && (isValid (getVarList (unifylist (x:xs) (y:ys))) (getVarList (unifylist (x:xs) (y:ys)))) = unifylist (x:xs) (y:ys)
+		    |otherwise = [No]
+
+{-Rule Unification
+sub :: [Term] -> [Term] -> [Term]
+sub [] x = []
+sub x [] = []
+sub [Yes] x = x
+sub x [Yes] = x
+sub (x:xs) (z:zs) = if getVar x == getVar z then (Cons (getVal x)) : sub xs zs else z : sub xs zs
+
+unify2 :: Term -> Rule -> [Term]
+unify3 :: [Term] -> [Term] -> [Term]
+unify3 _ [] = []
+unify3 x (z:zs) = [setTerms z (sub x (getTerms z))] ++ unify3 x zs
+unify2 x (y :- (z:zs)) = if unify x y /= [No] then [setTerms y (sub (unify x y) (getTerms y))] ++ unify3 (unify x y) (z:zs) else [No]  
+
+--solve1 :: [Term] -> [Term] -> [Term]
+
+--solve1 x (z:zs) = 
+-}
+
+
+unifylist :: [Term] -> [Term] -> [Term]
+--Base true case were able to reach end of [Term] successfully
+unifylist [] [] = [Yes]
+unifylist [] _  = [No]
+unifylist _ []  = [No]
+
+--if we encountered a unification of Cons we do not have to concat to result therefore skip if true and if we encountered a false unification no need to continue too else concat result of unification to rest results (i.e useful for multiple variable unifications) 
+unifylist (x:xs) (y:ys) = if (unify x y == [Yes]) then unifylist xs ys else if (unify x y /= [No]) then unify x y ++ unifylist xs ys else [No]
+unifylist (x:xs) (y:ys) = if (unify x y /= [No]) then unify x y ++ unifylist xs ys else [No]
+
+
+
+
+
+
+
